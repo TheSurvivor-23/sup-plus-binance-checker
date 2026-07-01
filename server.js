@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import http from "node:http";
 
+
 const PORT = process.env.PORT || 3000;
 
 function json(res, data, statusCode = 200) {
