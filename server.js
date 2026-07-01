@@ -1,34 +1,53 @@
-import crypto from "node:crypto";
-import http from "node:http";
-
-
-const PORT = process.env.PORT || 3000;
-
-function json(res, data, statusCode = 200) {
-  res.writeHead(statusCode, { "Content-Type": "application/json" });
-  res.end(JSON.stringify(data));
+function json(data, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: {
+      "Content-Type": "application/json"
+    }
+  });
 }
 
-function sign(query, secret) {
-  return crypto.createHmac("sha256", secret).update(query).digest("hex");
+async function hmacSha256(message, secret) {
+  const encoder = new TextEncoder();
+
+  const key = await crypto.subtle.importKey(
+    "raw",
+    encoder.encode(secret),
+    {
+      name: "HMAC",
+      hash: "SHA-256"
+    },
+    false,
+    ["sign"]
+  );
+
+  const signature = await crypto.subtle.sign(
+    "HMAC",
+    key,
+    encoder.encode(message)
+  );
+
+  return [...new Uint8Array(signature)]
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
 }
 
-const server = http.createServer(async (req, res) => {
+Deno.serve(async (request) => {
   try {
-    const url = new URL(req.url, `http://${req.headers.host}`);
+    const url = new URL(request.url);
 
     if (url.pathname !== "/check") {
-      return json(res, {
+      return json({
         ok: true,
         message: "SUP Plus Binance checker is running. Use /check?coin=USDT&amount=20"
       });
     }
 
-    const apiKey = process.env.BINANCE_API_KEY;
-    const secretKey = process.env.BINANCE_SECRET_KEY;
+    const apiKey = Deno.env.get("BINANCE_API_KEY");
+    const secretKey = Deno.env.get("BINANCE_SECRET_KEY");
 
     if (!apiKey || !secretKey) {
-      return json(res, {
+      return json({
         paid: false,
         error: "Missing Binance API environment variables"
       }, 500);
@@ -38,7 +57,7 @@ const server = http.createServer(async (req, res) => {
     const expectedAmount = Number(url.searchParams.get("amount") || "0");
 
     if (!expectedAmount || expectedAmount <= 0) {
-      return json(res, {
+      return json({
         paid: false,
         error: "Missing or invalid amount"
       }, 400);
@@ -50,7 +69,7 @@ const server = http.createServer(async (req, res) => {
     );
 
     const params = new URLSearchParams({
-      coin,
+      coin: coin,
       status: "1",
       startTime: String(startTime),
       recvWindow: "60000",
@@ -58,10 +77,13 @@ const server = http.createServer(async (req, res) => {
     });
 
     const query = params.toString();
-    const signature = sign(query, secretKey);
+    const signature = await hmacSha256(query, secretKey);
 
     const binanceUrl =
-      `https://api.binance.com/sapi/v1/capital/deposit/hisrec?${query}&signature=${signature}`;
+      "https://api.binance.com/sapi/v1/capital/deposit/hisrec?" +
+      query +
+      "&signature=" +
+      signature;
 
     const binanceResponse = await fetch(binanceUrl, {
       method: "GET",
@@ -75,8 +97,8 @@ const server = http.createServer(async (req, res) => {
     let data;
     try {
       data = JSON.parse(text);
-    } catch {
-      return json(res, {
+    } catch (_error) {
+      return json({
         paid: false,
         error: "Invalid Binance response",
         httpStatus: binanceResponse.status,
@@ -85,7 +107,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (!Array.isArray(data)) {
-      return json(res, {
+      return json({
         paid: false,
         error: "Binance API error",
         httpStatus: binanceResponse.status,
@@ -95,6 +117,7 @@ const server = http.createServer(async (req, res) => {
 
     const match = data.find((item) => {
       const amount = Number(item.amount);
+
       return (
         item.coin === coin &&
         Number(item.status) === 1 &&
@@ -103,7 +126,7 @@ const server = http.createServer(async (req, res) => {
     });
 
     if (match) {
-      return json(res, {
+      return json({
         paid: true,
         status: "PAID",
         amount: match.amount,
@@ -114,19 +137,15 @@ const server = http.createServer(async (req, res) => {
       });
     }
 
-    return json(res, {
+    return json({
       paid: false,
       status: "NOT_FOUND",
       message: "No matching successful deposit found"
     });
-  } catch (err) {
-    return json(res, {
+  } catch (error) {
+    return json({
       paid: false,
-      error: err.message
+      error: error.message
     }, 500);
   }
-});
-
-server.listen(PORT, () => {
-  console.log(`SUP Plus Binance checker running on port ${PORT}`);
 });
