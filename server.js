@@ -32,6 +32,10 @@ async function hmacSha256(message, secret) {
     .join("");
 }
 
+function cleanTxId(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
 Deno.serve(async (request) => {
   try {
     const url = new URL(request.url);
@@ -39,7 +43,7 @@ Deno.serve(async (request) => {
     if (url.pathname !== "/check") {
       return json({
         ok: true,
-        message: "SUP Plus Binance checker is running. Use /check?coin=USDT&amount=20"
+        message: "SUP Plus Binance checker is running. Use /check?coin=USDT&amount=20&txId=YOUR_TXID"
       });
     }
 
@@ -55,6 +59,7 @@ Deno.serve(async (request) => {
 
     const coin = url.searchParams.get("coin") || "USDT";
     const expectedAmount = Number(url.searchParams.get("amount") || "0");
+    const txIdInput = cleanTxId(url.searchParams.get("txId"));
 
     if (!expectedAmount || expectedAmount <= 0) {
       return json({
@@ -63,9 +68,19 @@ Deno.serve(async (request) => {
       }, 400);
     }
 
+    if (!txIdInput) {
+      return json({
+        paid: false,
+        error: "Missing TXID",
+        message: "Please provide txId in the URL"
+      }, 400);
+    }
+
     const now = Date.now();
+
+    // نفحص آخر 24 ساعة
     const startTime = Number(
-      url.searchParams.get("startTime") || now - 6 * 60 * 60 * 1000
+      url.searchParams.get("startTime") || now - 24 * 60 * 60 * 1000
     );
 
     const params = new URLSearchParams({
@@ -115,32 +130,42 @@ Deno.serve(async (request) => {
       });
     }
 
-    const match = data.find((item) => {
-      const amount = Number(item.amount);
-
-      return (
-        item.coin === coin &&
-        Number(item.status) === 1 &&
-        Math.abs(amount - expectedAmount) < 0.000001
-      );
+    const txMatch = data.find((item) => {
+      const itemTxId = cleanTxId(item.txId);
+      return itemTxId === txIdInput;
     });
 
-    if (match) {
+    if (!txMatch) {
       return json({
-        paid: true,
-        status: "PAID",
-        amount: match.amount,
-        coin: match.coin,
-        network: match.network || "",
-        txId: match.txId || "",
-        insertTime: match.insertTime || ""
+        paid: false,
+        status: "NOT_FOUND",
+        message: "No successful deposit found with this TXID"
+      });
+    }
+
+    const receivedAmount = Number(txMatch.amount);
+
+    if (Math.abs(receivedAmount - expectedAmount) > 0.000001) {
+      return json({
+        paid: false,
+        status: "AMOUNT_MISMATCH",
+        expectedAmount: expectedAmount,
+        receivedAmount: txMatch.amount,
+        coin: txMatch.coin,
+        network: txMatch.network || "",
+        txId: txMatch.txId || "",
+        message: "TXID found, but amount does not match"
       });
     }
 
     return json({
-      paid: false,
-      status: "NOT_FOUND",
-      message: "No matching successful deposit found"
+      paid: true,
+      status: "PAID",
+      amount: txMatch.amount,
+      coin: txMatch.coin,
+      network: txMatch.network || "",
+      txId: txMatch.txId || "",
+      insertTime: txMatch.insertTime || ""
     });
   } catch (error) {
     return json({
