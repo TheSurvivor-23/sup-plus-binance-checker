@@ -1,5 +1,5 @@
-import crypto from "crypto";
-import http from "http";
+import crypto from "node:crypto";
+import http from "node:http";
 
 const PORT = process.env.PORT || 3000;
 
