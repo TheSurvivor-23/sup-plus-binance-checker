@@ -469,19 +469,19 @@ Current: ${LANGS[lang]?.name || "English + عربي"}`;
 }
 async function showHome(chatId) {
   const lang = await langOf(chatId);
-  const products = await getActiveProducts();
-  const available = products.reduce((sum, p) => sum + Number(p.stock || 0), 0);
+
   const text = `✨ ${STORE_NAME}
 ${STORE_SUBTITLE}
 
 ${t(lang, "home_title")}
 
-🛒 ${btn(lang, "available_products")}: ${products.length}
-📦 ${btn(lang, "total_stock")}: ${available}
-💵 ${btn(lang, "currency")}: USDT
+✅ Fast delivery
+🔐 Secure payment
+🎧 Support available
 
 ${t(lang, "select_product")}`;
-  return await sendCard(chatId, text, homeKeyboard(lang), STORE_IMAGE_URL);
+
+  return await sendCard(chatId, text, homeKeyboard(lang), "");
 }
 function productLabel(p, lang = "dual") {
   const stock = Number(p.stock || 0);
