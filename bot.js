@@ -1002,8 +1002,6 @@ async function showProductsPage(chatId, page = 1, messageId = null) {
     totals.set(key, old);
   }
 
-  // Two wide buttons per row makes the catalog much easier to read on phones.
-  // Only services that actually have active plans are shown.
   const orderedKeys = CATEGORY_MENU_ROWS.flat();
   const visibleCategories = orderedKeys
     .filter((key, index) => orderedKeys.indexOf(key) === index)
@@ -1011,7 +1009,6 @@ async function showProductsPage(chatId, page = 1, messageId = null) {
     .map((key) => CATEGORY_BY_KEY[key])
     .filter(Boolean);
 
-  // Preserve any active category that is not in the priority list.
   const priorityKeys = new Set(orderedKeys);
   for (const category of CATEGORY_DEFS) {
     if (totals.has(category.key) && !priorityKeys.has(category.key)) {
@@ -1019,10 +1016,8 @@ async function showProductsPage(chatId, page = 1, messageId = null) {
     }
   }
 
-  // 12 apps per page = 6 rows x 2 columns.
-  // Telegram controls the physical height of inline buttons, so the best way
-  // to make the panel feel larger is to use fewer columns and more rows.
-  const APPS_PER_PAGE = 12;
+  // Taller mobile panel: 16 apps per page = 8 rows x 2 columns.
+  const APPS_PER_PAGE = 16;
   const totalPages = Math.max(1, Math.ceil(visibleCategories.length / APPS_PER_PAGE));
   page = Math.max(1, Math.min(Number(page) || 1, totalPages));
 
@@ -1031,23 +1026,29 @@ async function showProductsPage(chatId, page = 1, messageId = null) {
 
   for (let i = 0; i < shown.length; i += 2) {
     rows.push(shown.slice(i, i + 2).map((category) => ({
-      text: category.title,
+      text: `✨ ${category.title}`,
       callback_data: `cat_${category.key}`,
     })));
   }
 
   rows.push([
-    { text: "‹ Previous", callback_data: page > 1 ? `products_p${page - 1}` : "noop" },
-    { text: `${page}/${totalPages}`, callback_data: "noop" },
-    { text: "Next ›", callback_data: page < totalPages ? `products_p${page + 1}` : "noop" },
+    { text: '‹ السابق', callback_data: page > 1 ? `products_p${page - 1}` : 'noop' },
+    { text: `✨ ${page}/${totalPages} ✨`, callback_data: 'noop' },
+    { text: 'التالي ›', callback_data: page < totalPages ? `products_p${page + 1}` : 'noop' },
   ]);
 
   rows.push([
-    { text: "Refresh", callback_data: `products_p${page}` },
-    { text: "Home", callback_data: "menu" },
+    { text: '✨ تحديث', callback_data: `products_p${page}` },
+    { text: '🏠 الرئيسية', callback_data: 'menu' },
   ]);
 
-  const text = `${STORE_NAME}\n\nBalance: $${money(balance)} USDT\n\nProducts\nChoose an app, then choose the plan you want.`;
+  const text = `🏛 ${STORE_NAME}
+
+💰 Balance | الرصيد: $${money(balance)} USDT
+
+✨ Products | المنتجات
+اختَر التطبيق أولاً ثم اختر الباقة المناسبة.
+Choose an app first, then choose the plan you want.`;
   const markup = { inline_keyboard: rows };
 
   if (messageId) return await editMessage(chatId, messageId, text, markup);
@@ -1056,22 +1057,27 @@ async function showProductsPage(chatId, page = 1, messageId = null) {
 
 async function showCategoryPlans(chatId, key, messageId = null) {
   const lang = await langOf(chatId);
-  const cat = CATEGORY_BY_KEY[key] || { key, title: key, icon: "" };
+  const cat = CATEGORY_BY_KEY[key] || { key, title: key, icon: '' };
   const products = (await getActiveProducts()).filter((p) => serviceKeyForProduct(p) === key);
   const rows = [];
 
-  // Plans are intentionally one per row so the package name and price stay readable.
   for (const p of products) {
-    rows.push([{ text: productLabel(p, lang), callback_data: `product_${p.product_id}` }]);
+    rows.push([{ text: `✨ ${productLabel(p, lang)}`, callback_data: `product_${p.product_id}` }]);
   }
 
-  rows.push([{ text: "‹ Back to products", callback_data: "products_p1" }]);
+  rows.push([
+    { text: '‹ رجوع', callback_data: 'products_p1' },
+    { text: '🏠 الرئيسية', callback_data: 'menu' }
+  ]);
 
   const empty = products.length
-    ? ""
-    : "\n\nNo active plans are available for this app right now.";
+    ? ''
+    : `\n\nلا توجد باقات متاحة حالياً لهذا التطبيق.\nNo active plans are available for this app right now.`;
 
-  const text = `${cat.title}\n\nChoose the package that suits you.${empty}`;
+  const text = `✨ ${cat.title}
+
+اختر الباقة المناسبة لك.
+Choose the package that suits you.${empty}`;
   const markup = { inline_keyboard: rows };
 
   if (messageId) return await editMessage(chatId, messageId, text, markup);
