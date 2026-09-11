@@ -995,7 +995,7 @@ function productLabel(p, lang = "dual") {
 
   if (name.length > 42) name = `${name.slice(0, 39)}...`;
   const discount = p.discount ? ` · ${p.discount}` : "";
-  const status = stock > 0 ? `متوفر ${stock}` : "غير متوفر";
+  const status = stock > 0 ? `متوفر: ${stock}` : "غير متوفر";
   return `${name} · $${money(p.price)}${discount} · ${status}`;
 }
 
@@ -1056,14 +1056,15 @@ async function showProductsPage(chatId, page = 1, messageId = null) {
 
   const text = `✨ ${STORE_NAME}
 
-💰 الرصيد | Balance: $${money(balance)} USDT
+💰 الرصيد: $${money(balance)} USDT
+Balance: $${money(balance)} USDT
 
 ━━━━━━━━━━━━━━
-✨ المنتجات | Products
-اختر التطبيق أولاً، وبعدها ستظهر لك الباقات المتوفرة داخله.
-Choose an app first, then select the plan you want.
+✨ المنتجات
+Products
 
-صفحة ${page} من ${totalPages}`;
+اختر التطبيق أولاً، ثم اختر الباقة المناسبة.
+Choose an app first, then select the plan you want.`;
   const markup = { inline_keyboard: rows };
 
   if (messageId) return await editMessage(chatId, messageId, text, markup);
@@ -1091,8 +1092,11 @@ async function showCategoryPlans(chatId, key, messageId = null) {
 
   const text = `✨ ${cat.title}
 
-الباقات المتوفرة | Available Plans
+الباقات المتوفرة
+Available Plans
+
 ━━━━━━━━━━━━━━
+
 اختر الباقة المناسبة، ثم راجع التفاصيل والسعر قبل الشراء.
 Choose the plan that suits you, then review its details before purchase.${empty}`;
   const markup = { inline_keyboard: rows };
