@@ -94,26 +94,41 @@ const CATEGORY_DEFS = [
 ];
 
 const CATEGORY_MENU_ROWS = [
-  ["youtube", "spotify"],
-  ["grok", "claude", "chatgpt"],
-  ["kling", "google_one", "antigravity"],
-  ["microsoft", "duolingo", "zoom"],
-  ["canva", "tiktok", "notion"],
-  ["elevenlabs", "capcut", "autodesk"],
-  ["tradingview", "freepik", "wink"],
-  ["xinglu", "hma"],
-  ["gmail", "figma", "x"],
-  ["heygen", "proton", "tele"],
-  ["roblox", "cursor"],
-  ["nordvpn", "apple"],
-  ["adobe", "kaspersky", "facebook"],
-  ["discord", "krea", "dreamina"],
-  ["minimax", "meitu"],
-  ["scribd", "icloud"],
-  ["seedance", "locket"],
-  ["lovable", "xbox", "steam"],
-  ["kahoot", "expressvpn", "surfshark"],
-  ["reddit", "vieon"],
+  // Page priority: the most requested services first.
+  ["chatgpt", "gemini"],
+  ["canva", "youtube"],
+  ["spotify", "claude"],
+  ["capcut", "microsoft"],
+  ["grok", "kling"],
+  ["google_one", "netflix"],
+
+  ["adobe", "figma"],
+  ["notion", "perplexity"],
+  ["elevenlabs", "heygen"],
+  ["freepik", "krea"],
+  ["dreamina", "meitu"],
+  ["tiktok", "zoom"],
+
+  ["tradingview", "cursor"],
+  ["discord", "roblox"],
+  ["apple", "icloud"],
+  ["nordvpn", "hma"],
+  ["expressvpn", "surfshark"],
+  ["gmail", "tele"],
+
+  ["autodesk", "windows"],
+  ["duolingo", "kahoot"],
+  ["scribd", "wordwall"],
+  ["suno", "veo"],
+  ["quizlet", "coursera"],
+  ["reddit", "x"],
+
+  ["proton", "facebook"],
+  ["xbox", "steam"],
+  ["minimax", "seedance"],
+  ["locket", "lovable"],
+  ["antigravity", "xinglu"],
+  ["vieon", "kiro"],
 ];
 
 const CATEGORY_BY_KEY = Object.fromEntries(CATEGORY_DEFS.map((c) => [c.key, c]));
@@ -966,13 +981,12 @@ function serviceKeyForProduct(p) {
 }
 function productLabel(p, lang = "dual") {
   const stock = Number(p.stock || 0);
-  const status = stock > 0 ? `📦 ${stock}` : "sold out";
-  const x = stock > 0 ? "" : "❌ ";
   const name = productButtonName(p, lang);
-  const discount = p.discount ? ` 🔥${p.discount}` : "";
-  const icon = CATEGORY_BY_KEY[serviceKeyForProduct(p)]?.icon || "📦";
-  return `${x}${icon} ${name} — $${money(p.price)}${discount} (${status})`;
+  const discount = p.discount ? ` | ${p.discount}` : "";
+  const status = stock > 0 ? `Stock ${stock}` : "Sold out";
+  return `${name} — $${money(p.price)}${discount} | ${status}`;
 }
+
 async function showProductsPage(chatId, page = 1, messageId = null) {
   const lang = await langOf(chatId);
   const products = await getActiveProducts();
@@ -988,88 +1002,82 @@ async function showProductsPage(chatId, page = 1, messageId = null) {
     totals.set(key, old);
   }
 
-  // Keep the requested visual order exactly. Empty service groups may still appear,
-  // so the menu layout stays stable and identical on every refresh.
-  const availableRows = CATEGORY_MENU_ROWS.map((rowKeys) =>
-    rowKeys.map((key) => CATEGORY_BY_KEY[key]).filter(Boolean)
-  ).filter((row) => row.length);
+  // Two wide buttons per row makes the catalog much easier to read on phones.
+  // Only services that actually have active plans are shown.
+  const orderedKeys = CATEGORY_MENU_ROWS.flat();
+  const visibleCategories = orderedKeys
+    .filter((key, index) => orderedKeys.indexOf(key) === index)
+    .filter((key) => totals.has(key))
+    .map((key) => CATEGORY_BY_KEY[key])
+    .filter(Boolean);
 
-  // Preserve existing services that are not part of the requested layout.
-  const menuKeys = new Set(CATEGORY_MENU_ROWS.flat());
-  const additionalCategories = CATEGORY_DEFS.filter(
-    (category) => totals.has(category.key) && !menuKeys.has(category.key)
-  );
-  for (let i = 0; i < additionalCategories.length; i += 3) {
-    availableRows.push(additionalCategories.slice(i, i + 3));
+  // Preserve any active category that is not in the priority list.
+  const priorityKeys = new Set(orderedKeys);
+  for (const category of CATEGORY_DEFS) {
+    if (totals.has(category.key) && !priorityKeys.has(category.key)) {
+      visibleCategories.push(category);
+    }
   }
 
-  const ROWS_PER_PAGE = 4;
-  const totalPages = Math.max(1, Math.ceil(availableRows.length / ROWS_PER_PAGE));
+  // 12 apps per page = 6 rows x 2 columns.
+  // Telegram controls the physical height of inline buttons, so the best way
+  // to make the panel feel larger is to use fewer columns and more rows.
+  const APPS_PER_PAGE = 12;
+  const totalPages = Math.max(1, Math.ceil(visibleCategories.length / APPS_PER_PAGE));
   page = Math.max(1, Math.min(Number(page) || 1, totalPages));
 
-  const startIndex = (page - 1) * ROWS_PER_PAGE;
-  const shownRows = availableRows.slice(startIndex, startIndex + ROWS_PER_PAGE);
+  const shown = visibleCategories.slice((page - 1) * APPS_PER_PAGE, page * APPS_PER_PAGE);
   const rows = [];
 
-  for (const rowCategories of shownRows) {
-    rows.push(rowCategories.map((category) => ({
-      text: `${category.icon} ${category.title}`,
+  for (let i = 0; i < shown.length; i += 2) {
+    rows.push(shown.slice(i, i + 2).map((category) => ({
+      text: category.title,
       callback_data: `cat_${category.key}`,
     })));
   }
 
   rows.push([
-    { text: "⬅️ Previous", callback_data: page > 1 ? `products_p${page - 1}` : "noop" },
+    { text: "‹ Previous", callback_data: page > 1 ? `products_p${page - 1}` : "noop" },
     { text: `${page}/${totalPages}`, callback_data: "noop" },
-    { text: "Next ➡️", callback_data: page < totalPages ? `products_p${page + 1}` : "noop" },
+    { text: "Next ›", callback_data: page < totalPages ? `products_p${page + 1}` : "noop" },
   ]);
 
   rows.push([
-    { text: `🔄 ${btn(lang, "refresh")} products`, callback_data: `products_p${page}` },
+    { text: "Refresh", callback_data: `products_p${page}` },
+    { text: "Home", callback_data: "menu" },
   ]);
 
-  rows.push([
-    { text: `🌐 ${btn(lang, "language")}`, callback_data: "language" },
-    { text: `🏠 ${btn(lang, "home")}`, callback_data: "menu" },
-  ]);
-
-  const text = `🏛 ${STORE_NAME}
-💰 Your Balance: $${money(balance)} USDT
-
-🛍 Available Products
-📄 Page ${page}/${totalPages}
-
-Please select a product category below.`;
+  const text = `${STORE_NAME}\n\nBalance: $${money(balance)} USDT\n\nProducts\nChoose an app, then choose the plan you want.`;
   const markup = { inline_keyboard: rows };
 
   if (messageId) return await editMessage(chatId, messageId, text, markup);
   return await sendMessage(chatId, text, markup);
 }
+
 async function showCategoryPlans(chatId, key, messageId = null) {
   const lang = await langOf(chatId);
-  const cat = CATEGORY_BY_KEY[key] || { key, title: key, icon: "📦" };
+  const cat = CATEGORY_BY_KEY[key] || { key, title: key, icon: "" };
   const products = (await getActiveProducts()).filter((p) => serviceKeyForProduct(p) === key);
   const rows = [];
 
+  // Plans are intentionally one per row so the package name and price stay readable.
   for (const p of products) {
     rows.push([{ text: productLabel(p, lang), callback_data: `product_${p.product_id}` }]);
   }
 
-  rows.push([{ text: "🔙 Back", callback_data: "products_p1" }]);
-  const desc = CATEGORY_DESCRIPTIONS[key] || "Select a plan to purchase.";
-  const empty = products.length ? "" : `
+  rows.push([{ text: "‹ Back to products", callback_data: "products_p1" }]);
 
-⚠️ No active plans are available in this category right now.`;
-  const text = `${cat.icon} ${cat.title}
+  const empty = products.length
+    ? ""
+    : "\n\nNo active plans are available for this app right now.";
 
-${desc}${empty}
-
-📌 Select a plan to purchase:`;
+  const text = `${cat.title}\n\nChoose the package that suits you.${empty}`;
   const markup = { inline_keyboard: rows };
 
   if (messageId) return await editMessage(chatId, messageId, text, markup);
   return await sendMessage(chatId, text, markup);
 }
+
 async function showTopUp(chatId, previousMessageId = null) {
   const balance = await getBalance(chatId);
   const text = `💳 Top Up Your Wallet
