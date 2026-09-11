@@ -1227,37 +1227,134 @@ Available products and updated prices:`, { inline_keyboard: rows }, "", previous
 }
 function productDetailsText(p, lang = "dual") {
   const inStock = Number(p.stock || 0) > 0;
-  const warranty = p.warranty === "YES" ? `${p.warranty_days || 30} days` : "-";
-  const desc = productDescription(p, lang);
-  const shortDesc = String(desc).length > 650 ? `${String(desc).slice(0, 650)}...` : desc;
-  return `✨ ${STORE_NAME}
-${STORE_SUBTITLE}
+  const titleEn = String(p.name_en || p.button_name || p.product_id || "Product").trim();
+  const titleAr = String(p.name_ar || titleEn).trim();
+  const title = titleEn.toLowerCase() === titleAr.toLowerCase() ? titleEn : `${titleEn} | ${titleAr}`;
 
-🔮 ${productName(p, lang)}
+  const descEn = String(p.description_en || "").trim();
+  const descAr = String(p.description_ar || "").trim();
+  const durationEn = String(p.duration || "-").trim();
+  const durationAr = durationEn
+    .replace(/^1 Month$/i, "شهر واحد")
+    .replace(/^3 Months$/i, "3 أشهر")
+    .replace(/^6 Months$/i, "6 أشهر")
+    .replace(/^12 Months$/i, "12 شهر")
+    .replace(/^18 Months$/i, "18 شهر")
+    .replace(/^30 Days$/i, "30 يوم")
+    .replace(/^10 Days$/i, "10 أيام")
+    .replace(/^7 Days$/i, "7 أيام");
 
-💵 ${btn(lang, "price")}: $${money(p.price)} USDT
-📦 ${btn(lang, "stock")}: ${p.stock}
-${inStock ? "🟢 " + btn(lang, "available") : "🔴 " + btn(lang, "out_stock")}
-🚚 ${btn(lang, "delivery")}: ${p.delivery_mode === "auto" ? btn(lang, "auto_delivery") : btn(lang, "manual_delivery")}
-🛡 ${btn(lang, "warranty")}: ${warranty}
-⏳ ${btn(lang, "duration")}: ${p.duration}
+  const warrantyDays = Number(p.warranty_days || 30);
+  const hasWarranty = p.warranty === "YES";
+  const deliveryAr = p.delivery_mode === "auto" ? "تلقائي بعد الدفع" : "يدوي بعد الدفع";
+  const deliveryEn = p.delivery_mode === "auto" ? "Automatic after payment" : "Manual after payment";
+  const statusAr = inStock ? "متوفر" : "غير متوفر";
+  const statusEn = inStock ? "Available" : "Out of stock";
+
+  const arBlock = `✨ ${titleAr}
+
+السعر: ${money(p.price)} USDT
+المتوفر: ${p.stock}
+الحالة: ${statusAr}
+المدة: ${durationAr}
+التسليم: ${deliveryAr}
+الضمان: ${hasWarranty ? `${warrantyDays} يوم` : "بدون ضمان"}
+
+${descAr || "لا يوجد وصف إضافي."}`;
+
+  const enBlock = `✨ ${titleEn}
+
+Price: ${money(p.price)} USDT
+Stock: ${p.stock}
+Status: ${statusEn}
+Duration: ${durationEn}
+Delivery: ${deliveryEn}
+Warranty: ${hasWarranty ? `${warrantyDays} days` : "No warranty"}
+
+${descEn || "No additional description."}`;
+
+  if (lang === "ar") {
+    return `${arBlock}
 
 ━━━━━━━━━━━━━━
-${shortDesc}
+مهم: لا يوجد استرجاع بعد التسليم. تأكد من المنتج والكمية قبل الشراء.`;
+  }
+
+  if (lang === "en") {
+    return `${enBlock}
 
 ━━━━━━━━━━━━━━
-📌 Important:
-• No refund after delivery.
-• Make sure you select the correct product and quantity.
-• Contact support if you need help before purchase.
+Important: No refund after delivery. Check the product and quantity before purchase.`;
+  }
 
-🧾 ${btn(lang, "product_id")}: ${p.product_id}`;
+  if (lang !== "dual") {
+    const translatedName = productName(p, lang).replace(/\n/g, " / ");
+    return `✨ ${translatedName}
+
+${money(p.price)} USDT
+Stock: ${p.stock}
+${statusEn}
+${durationEn}
+
+${productDescription(p, lang)}`;
+  }
+
+  return `✨ ${title}
+
+الباقة والتفاصيل
+Plan details
+
+━━━━━━━━━━━━━━
+
+السعر: ${money(p.price)} USDT
+المتوفر: ${p.stock}
+الحالة: ${statusAr}
+المدة: ${durationAr}
+التسليم: ${deliveryAr}
+الضمان: ${hasWarranty ? `${warrantyDays} يوم` : "بدون ضمان"}
+
+${descAr || "لا يوجد وصف إضافي."}
+
+━━━━━━━━━━━━━━
+
+Price: ${money(p.price)} USDT
+Stock: ${p.stock}
+Status: ${statusEn}
+Duration: ${durationEn}
+Delivery: ${deliveryEn}
+Warranty: ${hasWarranty ? `${warrantyDays} days` : "No warranty"}
+
+${descEn || "No additional description."}
+
+━━━━━━━━━━━━━━
+
+مهم: لا يوجد استرجاع بعد التسليم. تأكد من المنتج والكمية قبل الشراء.
+Important: No refund after delivery. Check the product and quantity before purchase.`;
 }
 function productKeyboard(p, lang = "dual") {
   const rows = [];
-  if (Number(p.stock || 0) > 0) rows.push([{ text: `🛒 ${btn(lang, "buy_now")}`, callback_data: `buy_${p.product_id}` }]);
-  else rows.push([{ text: `🔴 ${btn(lang, "out_stock")}`, callback_data: "noop" }]);
-  rows.push([{ text: `↩️ ${btn(lang, "back_store")}`, callback_data: `cat_${serviceKeyForProduct(p)}` }]);
+  const available = Number(p.stock || 0) > 0;
+
+  const buyText = lang === "ar"
+    ? "✨ شراء الآن"
+    : lang === "en"
+      ? "✨ Buy Now"
+      : "✨ شراء الآن | Buy Now";
+
+  const outText = lang === "ar"
+    ? "غير متوفر"
+    : lang === "en"
+      ? "Out of stock"
+      : "غير متوفر | Out of stock";
+
+  if (available) rows.push([{ text: buyText, callback_data: `buy_${p.product_id}` }]);
+  else rows.push([{ text: outText, callback_data: "noop" }]);
+
+  rows.push([
+    { text: lang === "en" ? "‹ Plans" : "‹ الباقات", callback_data: `cat_${serviceKeyForProduct(p)}` },
+    { text: lang === "en" ? "Home" : "الرئيسية", callback_data: "menu" },
+  ]);
+
   return { inline_keyboard: rows };
 }
 async function showProduct(chatId, productId, previousMessageId = null) {
