@@ -87,6 +87,10 @@ const CATEGORY_DEFS = [
   { key: "quizlet", title: "Quizlet", icon: "🧠" },
   { key: "coursera", title: "Coursera", icon: "🎓" },
   { key: "kimi", title: "Kimi Allegretto 39$", icon: "🤖" },
+  { key: "poe", title: "Poe", icon: "🤖" },
+  { key: "copilot", title: "Copilot", icon: "🪟" },
+  { key: "deepseek", title: "DeepSeek", icon: "🐋" },
+  { key: "notebooklm", title: "NotebookLM", icon: "📓" },
 ];
 
 const CATEGORY_MENU_ROWS = [
@@ -871,13 +875,103 @@ function categoryKey(category) {
   if (CATEGORY_KEY_BY_TITLE[low]) return CATEGORY_KEY_BY_TITLE[low];
   return low.replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "") || "other";
 }
+function serviceKeyForProduct(p) {
+  const direct = categoryKey(p?.category || "");
+  if (CATEGORY_BY_KEY[direct]) return direct;
+
+  const hay = [
+    p?.product_id,
+    p?.button_name,
+    p?.name_en,
+    p?.name_ar,
+    p?.category,
+  ].filter(Boolean).join(" ").toLowerCase();
+
+  const has = (...terms) => terms.some((term) => hay.includes(term));
+
+  if (has("youtube", "ytb ")) return "youtube";
+  if (has("spotify")) return "spotify";
+  if (has("super grok", "grok")) return "grok";
+  if (has("claude")) return "claude";
+  if (has("chatgpt", "chat gpt", "gpt plus", "gpt team", "gpt go", "codex")) return "chatgpt";
+  if (has("kling")) return "kling";
+  if (has("google one", "one 5tb", "googleone")) return "google_one";
+  if (has("antigravity")) return "antigravity";
+  if (has("office 365", "microsoft 365", "o365")) return "microsoft";
+  if (has("duolingo")) return "duolingo";
+  if (has("zoom")) return "zoom";
+  if (has("canva")) return "canva";
+  if (has("tiktok", "tik tok")) return "tiktok";
+  if (has("notion")) return "notion";
+  if (has("elevenlabs", "eleven labs")) return "elevenlabs";
+  if (has("capcut", "cap cut")) return "capcut";
+  if (has("autodesk")) return "autodesk";
+  if (has("tradingview", "trading view")) return "tradingview";
+  if (has("freepik")) return "freepik";
+  if (has("wink")) return "wink";
+  if (has("xinglu")) return "xinglu";
+  if (has("hma vpn", " hma ", "hma_")) return "hma";
+  if (has("gmail")) return "gmail";
+  if (has("figma")) return "figma";
+  if (/(^|[^a-z])x([^a-z]|$)/.test(hay) || has("twitter")) return "x";
+  if (has("heygen", "hey gen")) return "heygen";
+  if (has("proton")) return "proton";
+  if (has("telegram", " tele ")) return "tele";
+  if (has("roblox")) return "roblox";
+  if (has("cursor")) return "cursor";
+  if (has("nordvpn", "nord vpn")) return "nordvpn";
+  if (has("apple")) return "apple";
+  if (has("adobe")) return "adobe";
+  if (has("kaspersky")) return "kaspersky";
+  if (has("facebook")) return "facebook";
+  if (has("discord")) return "discord";
+  if (has("krea")) return "krea";
+  if (has("dreamina")) return "dreamina";
+  if (has("minimax", "mini max")) return "minimax";
+  if (has("meitu")) return "meitu";
+  if (has("scribd")) return "scribd";
+  if (has("icloud", "i cloud")) return "icloud";
+  if (has("seedance")) return "seedance";
+  if (has("locket")) return "locket";
+  if (has("lovable")) return "lovable";
+  if (has("xbox")) return "xbox";
+  if (has("steam")) return "steam";
+  if (has("kahoot")) return "kahoot";
+  if (has("expressvpn", "express vpn")) return "expressvpn";
+  if (has("surfshark", "surf shark")) return "surfshark";
+  if (has("reddit")) return "reddit";
+  if (has("vieon")) return "vieon";
+
+  if (has("gamma")) return "gamma";
+  if (has("netflix")) return "netflix";
+  if (has("turnitin")) return "turnitin";
+  if (has("elsa")) return "elsa";
+  if (has("veo", "flow")) return "veo";
+  if (has("windows")) return "windows";
+  if (has("perplexity")) return "perplexity";
+  if (has("wordwall")) return "wordwall";
+  if (has("suno")) return "suno";
+  if (has("gemini")) return "gemini";
+  if (has("higgs")) return "higgs";
+  if (has("kiro")) return "kiro";
+  if (has("quizlet")) return "quizlet";
+  if (has("coursera")) return "coursera";
+  if (has("kimi")) return "kimi";
+  if (has("poe")) return "poe";
+  if (has("copilot")) return "copilot";
+  if (has("deepseek", "deep seek")) return "deepseek";
+  if (has("notebooklm", "notebook lm")) return "notebooklm";
+
+  return direct;
+}
 function productLabel(p, lang = "dual") {
   const stock = Number(p.stock || 0);
   const status = stock > 0 ? `📦 ${stock}` : "sold out";
   const x = stock > 0 ? "" : "❌ ";
   const name = productButtonName(p, lang);
   const discount = p.discount ? ` 🔥${p.discount}` : "";
-  return `${x}${categoryIcon(p.category)} ${name} — $${money(p.price)}${discount} (${status})`;
+  const icon = CATEGORY_BY_KEY[serviceKeyForProduct(p)]?.icon || "📦";
+  return `${x}${icon} ${name} — $${money(p.price)}${discount} (${status})`;
 }
 async function showProductsPage(chatId, page = 1, messageId = null) {
   const lang = await langOf(chatId);
@@ -886,7 +980,7 @@ async function showProductsPage(chatId, page = 1, messageId = null) {
 
   const totals = new Map();
   for (const p of products) {
-    const key = categoryKey(p.category);
+    const key = serviceKeyForProduct(p);
     if (!CATEGORY_BY_KEY[key]) continue;
     const old = totals.get(key) || { count: 0, stock: 0 };
     old.count += 1;
@@ -894,15 +988,13 @@ async function showProductsPage(chatId, page = 1, messageId = null) {
     totals.set(key, old);
   }
 
-  const availableRows = [];
-  for (const rowKeys of CATEGORY_MENU_ROWS) {
-    const row = rowKeys
-      .filter((key) => totals.has(key))
-      .map((key) => CATEGORY_BY_KEY[key])
-      .filter(Boolean);
-    if (row.length) availableRows.push(row);
-  }
+  // Keep the requested visual order exactly. Empty service groups may still appear,
+  // so the menu layout stays stable and identical on every refresh.
+  const availableRows = CATEGORY_MENU_ROWS.map((rowKeys) =>
+    rowKeys.map((key) => CATEGORY_BY_KEY[key]).filter(Boolean)
+  ).filter((row) => row.length);
 
+  // Preserve existing services that are not part of the requested layout.
   const menuKeys = new Set(CATEGORY_MENU_ROWS.flat());
   const additionalCategories = CATEGORY_DEFS.filter(
     (category) => totals.has(category.key) && !menuKeys.has(category.key)
@@ -911,21 +1003,6 @@ async function showProductsPage(chatId, page = 1, messageId = null) {
     availableRows.push(additionalCategories.slice(i, i + 3));
   }
 
-  if (!availableRows.length) {
-    const rows = products.slice(0, 12).map((p) => [
-      { text: productLabel(p, lang), callback_data: `product_${p.product_id}` },
-    ]);
-    rows.push([{ text: `🏠 ${btn(lang, "home")}`, callback_data: "menu" }]);
-    return await sendCard(
-      chatId,
-      `🛍 Available Products\n\n${t(lang, "select_product")}:`,
-      { inline_keyboard: rows },
-      "",
-      messageId,
-    );
-  }
-
-  // Four visual rows per page keeps the list compact on mobile.
   const ROWS_PER_PAGE = 4;
   const totalPages = Math.max(1, Math.ceil(availableRows.length / ROWS_PER_PAGE));
   page = Math.max(1, Math.min(Number(page) || 1, totalPages));
@@ -935,31 +1012,20 @@ async function showProductsPage(chatId, page = 1, messageId = null) {
   const rows = [];
 
   for (const rowCategories of shownRows) {
-    rows.push(
-      rowCategories.map((category) => ({
-        text: `${category.icon} ${category.title}`,
-        callback_data: `cat_${category.key}`,
-      })),
-    );
+    rows.push(rowCategories.map((category) => ({
+      text: `${category.icon} ${category.title}`,
+      callback_data: `cat_${category.key}`,
+    })));
   }
 
   rows.push([
-    {
-      text: "⬅️ Previous",
-      callback_data: page > 1 ? `products_p${page - 1}` : "noop",
-    },
+    { text: "⬅️ Previous", callback_data: page > 1 ? `products_p${page - 1}` : "noop" },
     { text: `${page}/${totalPages}`, callback_data: "noop" },
-    {
-      text: "Next ➡️",
-      callback_data: page < totalPages ? `products_p${page + 1}` : "noop",
-    },
+    { text: "Next ➡️", callback_data: page < totalPages ? `products_p${page + 1}` : "noop" },
   ]);
 
   rows.push([
-    {
-      text: `🔄 ${btn(lang, "refresh")} products`,
-      callback_data: `products_p${page}`,
-    },
+    { text: `🔄 ${btn(lang, "refresh")} products`, callback_data: `products_p${page}` },
   ]);
 
   rows.push([
@@ -971,28 +1037,36 @@ async function showProductsPage(chatId, page = 1, messageId = null) {
 💰 Your Balance: $${money(balance)} USDT
 
 🛍 Available Products
-📄 Page ${page} / ${totalPages}
+📄 Page ${page}/${totalPages}
 
-Please select a product below 👇`;
-
+Please select a product category below.`;
   const markup = { inline_keyboard: rows };
+
   if (messageId) return await editMessage(chatId, messageId, text, markup);
   return await sendMessage(chatId, text, markup);
 }
 async function showCategoryPlans(chatId, key, messageId = null) {
   const lang = await langOf(chatId);
   const cat = CATEGORY_BY_KEY[key] || { key, title: key, icon: "📦" };
-  const products = (await getActiveProducts()).filter((p) => categoryKey(p.category) === key);
+  const products = (await getActiveProducts()).filter((p) => serviceKeyForProduct(p) === key);
   const rows = [];
-  for (const p of products) rows.push([{ text: productLabel(p, lang), callback_data: `product_${p.product_id}` }]);
+
+  for (const p of products) {
+    rows.push([{ text: productLabel(p, lang), callback_data: `product_${p.product_id}` }]);
+  }
+
   rows.push([{ text: "🔙 Back", callback_data: "products_p1" }]);
   const desc = CATEGORY_DESCRIPTIONS[key] || "Select a plan to purchase.";
+  const empty = products.length ? "" : `
+
+⚠️ No active plans are available in this category right now.`;
   const text = `${cat.icon} ${cat.title}
 
-${desc}
+${desc}${empty}
 
 📌 Select a plan to purchase:`;
   const markup = { inline_keyboard: rows };
+
   if (messageId) return await editMessage(chatId, messageId, text, markup);
   return await sendMessage(chatId, text, markup);
 }
@@ -1140,7 +1214,7 @@ function productKeyboard(p, lang = "dual") {
   const rows = [];
   if (Number(p.stock || 0) > 0) rows.push([{ text: `🛒 ${btn(lang, "buy_now")}`, callback_data: `buy_${p.product_id}` }]);
   else rows.push([{ text: `🔴 ${btn(lang, "out_stock")}`, callback_data: "noop" }]);
-  rows.push([{ text: `↩️ ${btn(lang, "back_store")}`, callback_data: `cat_${categoryKey(p.category)}` }]);
+  rows.push([{ text: `↩️ ${btn(lang, "back_store")}`, callback_data: `cat_${serviceKeyForProduct(p)}` }]);
   return { inline_keyboard: rows };
 }
 async function showProduct(chatId, productId, previousMessageId = null) {
