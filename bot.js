@@ -308,8 +308,8 @@ const memoryStore = new Map();
 
 // Performance cache: keeps KV persistent but avoids reading the whole database on every button click.
 // You can override from Deno Environment Variables if needed.
-const PRODUCT_CACHE_TTL_MS = Number(Deno.env.get("PRODUCT_CACHE_TTL_MS") || "60000");
-const USER_WRITE_TTL_MS = Number(Deno.env.get("USER_WRITE_TTL_MS") || "600000");
+const PRODUCT_CACHE_TTL_MS = Number(Deno.env.get("PRODUCT_CACHE_TTL_MS") || "300000");
+const USER_WRITE_TTL_MS = Number(Deno.env.get("USER_WRITE_TTL_MS") || "3600000");
 let allProductsCache = { at: 0, value: null };
 let customProductsCache = { at: 0, value: null };
 let productStatesMapCache = { at: 0, value: null };
@@ -858,9 +858,11 @@ async function showLanguage(chatId, previousMessageId = null) {
 Current: ${LANGS[lang]?.name || "English + عربي"}`;
   return await sendCard(chatId, text, languageKeyboard(), "", previousMessageId);
 }
-async function showHome(chatId) {
-  const lang = await langOf(chatId);
-  const balance = await getBalance(chatId);
+async function showHome(chatId, previousMessageId = null) {
+  const [lang, balance] = await Promise.all([
+    langOf(chatId),
+    getBalance(chatId),
+  ]);
   const text = `✨ ${STORE_NAME}
 ${STORE_SUBTITLE}
 
@@ -874,6 +876,7 @@ $${money(balance)} USDT
 
 Your digital subscriptions in one place.
 Choose where you want to start.`;
+  if (previousMessageId) return await editMessage(chatId, previousMessageId, text, homeKeyboard(lang));
   return await sendCard(chatId, text, homeKeyboard(lang), "");
 }
 
@@ -1000,9 +1003,11 @@ function productLabel(p, lang = "dual") {
 }
 
 async function showProductsPage(chatId, page = 1, messageId = null) {
-  const lang = await langOf(chatId);
-  const products = await getActiveProducts();
-  const balance = await getBalance(chatId);
+  const [lang, products, balance] = await Promise.all([
+    langOf(chatId),
+    getActiveProducts(),
+    getBalance(chatId),
+  ]);
 
   const totals = new Map();
   for (const p of products) {
@@ -1072,9 +1077,12 @@ Choose an app first, then select the plan you want.`;
 }
 
 async function showCategoryPlans(chatId, key, messageId = null) {
-  const lang = await langOf(chatId);
+  const [lang, activeProducts] = await Promise.all([
+    langOf(chatId),
+    getActiveProducts(),
+  ]);
   const cat = CATEGORY_BY_KEY[key] || { key, title: key, icon: "" };
-  const products = (await getActiveProducts()).filter((p) => serviceKeyForProduct(p) === key);
+  const products = activeProducts.filter((p) => serviceKeyForProduct(p) === key);
   const rows = [];
 
   for (const p of products) {
@@ -1253,10 +1261,15 @@ function productKeyboard(p, lang = "dual") {
   return { inline_keyboard: rows };
 }
 async function showProduct(chatId, productId, previousMessageId = null) {
-  const lang = await langOf(chatId);
-  const p = await findProduct(productId);
+  const [lang, p] = await Promise.all([
+    langOf(chatId),
+    findProduct(productId),
+  ]);
   if (!p) return await sendMessage(chatId, `⚠️ ${t(lang, "product_not_found")}`);
-  return await sendCard(chatId, productDetailsText(p, lang), productKeyboard(p, lang), p.image_url, previousMessageId);
+  const text = productDetailsText(p, lang);
+  const markup = productKeyboard(p, lang);
+  if (previousMessageId && !p.image_url) return await editMessage(chatId, previousMessageId, text, markup);
+  return await sendCard(chatId, text, markup, p.image_url, previousMessageId);
 }
 function quantityKeyboard(p, lang = "dual") {
   const stock = Number(p.stock || 0);
@@ -1270,8 +1283,10 @@ function quantityKeyboard(p, lang = "dual") {
   return { inline_keyboard: rows };
 }
 async function showQuantity(chatId, productId, previousMessageId = null) {
-  const lang = await langOf(chatId);
-  const p = await findProduct(productId);
+  const [lang, p] = await Promise.all([
+    langOf(chatId),
+    findProduct(productId),
+  ]);
   if (!p) return await sendMessage(chatId, `⚠️ ${t(lang, "product_not_found")}`);
   const text = `🛒 ${t(lang, "select_qty")}
 
@@ -1282,7 +1297,9 @@ async function showQuantity(chatId, productId, previousMessageId = null) {
 ${productDescription(p, lang)}
 
 ${t(lang, "how_many")}`;
-  return await sendCard(chatId, text, quantityKeyboard(p, lang), p.image_url, previousMessageId);
+  const markup = quantityKeyboard(p, lang);
+  if (previousMessageId && !p.image_url) return await editMessage(chatId, previousMessageId, text, markup);
+  return await sendCard(chatId, text, markup, p.image_url, previousMessageId);
 }
 function parseQty(data) {
   const rest = data.replace(/^qty_/, "");
@@ -1290,9 +1307,11 @@ function parseQty(data) {
   return { productId: rest.slice(0, last), qty: Number(rest.slice(last + 1)) };
 }
 async function showSummary(chatId, data, previousMessageId = null) {
-  const lang = await langOf(chatId);
   const { productId, qty } = parseQty(data);
-  const p = await findProduct(productId);
+  const [lang, p] = await Promise.all([
+    langOf(chatId),
+    findProduct(productId),
+  ]);
   if (!p) return await sendMessage(chatId, `⚠️ ${t(lang, "product_not_found")}`);
   if (qty < 1 || qty > Number(p.stock || 0)) return await sendMessage(chatId, `🔴 ${t(lang, "qty_not_available")}. ${btn(lang, "stock")}: ${p.stock}`);
   const total = Number(p.price) * qty;
@@ -1307,6 +1326,7 @@ ${productDescription(p, lang)}`;
     [{ text: `✅ ${btn(lang, "confirm_pay")}`, callback_data: `confirm_${productId}_${qty}` }],
     [{ text: `↩️ ${btn(lang, "change_qty")}`, callback_data: `buy_${productId}` }, { text: `🏠 ${btn(lang, "home")}`, callback_data: "menu" }],
   ] };
+  if (previousMessageId && !p.image_url) return await editMessage(chatId, previousMessageId, text, markup);
   return await sendCard(chatId, text, markup, p.image_url, previousMessageId);
 }
 function parsePay(data, prefix) {
@@ -2389,7 +2409,7 @@ async function handleCallback(q) {
   const messageId = q.message?.message_id;
   const data = String(q.data || "");
   if (!chatId) return;
-  await registerUser(q.message.chat, q.from);
+  // Answer the button immediately so Telegram stops showing the loading spinner.
   await answerCallback(q.id);
   if (data === "noop") return;
   if (data === "language") return await showLanguage(chatId, messageId);
@@ -2398,7 +2418,7 @@ async function handleCallback(q) {
     const lang = await setLang(chatId, selected);
     return await sendCard(chatId, `✅ ${t(lang, "language_saved")}\n${LANGS[lang].label}`, homeKeyboard(lang), "", messageId);
   }
-  if (data === "menu") return await showHome(chatId);
+  if (data === "menu") return await showHome(chatId, messageId);
   if (data === "profile") return await showProfile(chatId, messageId);
   if (data === "topup") return await showTopUp(chatId, messageId);
   if (data.startsWith("topup_amount_")) return await showTopupInvoice(chatId, Number(data.replace("topup_amount_", "")), messageId);
