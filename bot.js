@@ -18,49 +18,117 @@ const MAX_BROADCAST_USERS = Number(Deno.env.get("MAX_BROADCAST_USERS") || "2500"
 
 
 const CATEGORY_DEFS = [
-  { key: "chatgpt", title: "ChatGPT", icon: "🔥" },
-  { key: "canva", title: "Canva", icon: "🎨" },
+  { key: "youtube", title: "YouTube", icon: "▶️" },
   { key: "spotify", title: "Spotify", icon: "🎵" },
+  { key: "grok", title: "Grok", icon: "✖️" },
+  { key: "claude", title: "Claude", icon: "🌸" },
+  { key: "chatgpt", title: "ChatGPT", icon: "🤖" },
+  { key: "kling", title: "Kling", icon: "🎥" },
+  { key: "google_one", title: "Google One", icon: "🔐" },
+  { key: "antigravity", title: "Antigravity", icon: "🅰️" },
+  { key: "microsoft", title: "Microsoft Office 365", icon: "🪟" },
+  { key: "duolingo", title: "Duolingo", icon: "🦉" },
+  { key: "zoom", title: "Zoom", icon: "🔵" },
+  { key: "canva", title: "Canva", icon: "🖼️" },
+  { key: "tiktok", title: "TikTok", icon: "🎵" },
+  { key: "notion", title: "Notion", icon: "📝" },
+  { key: "elevenlabs", title: "ElevenLabs", icon: "🎙️" },
+  { key: "capcut", title: "Capcut", icon: "✂️" },
+  { key: "autodesk", title: "AutoDesk", icon: "🅰️" },
+  { key: "tradingview", title: "TradingView", icon: "📈" },
+  { key: "freepik", title: "Freepik", icon: "🧩" },
+  { key: "wink", title: "Wink", icon: "✨" },
+  { key: "xinglu", title: "Xinglu", icon: "🟢" },
+  { key: "hma", title: "HMA Vpn", icon: "🛡️" },
+  { key: "gmail", title: "Gmail", icon: "📧" },
+  { key: "figma", title: "Figma", icon: "🎨" },
+  { key: "x", title: "X", icon: "✖️" },
+  { key: "heygen", title: "HeyGen", icon: "🖼️" },
+  { key: "proton", title: "Proton", icon: "🔻" },
+  { key: "tele", title: "Tele", icon: "✈️" },
+  { key: "roblox", title: "Roblox", icon: "💠" },
+  { key: "cursor", title: "Cursor", icon: "💻" },
+  { key: "nordvpn", title: "NordVPN", icon: "🏔️" },
+  { key: "apple", title: "Apple", icon: "🍎" },
+  { key: "adobe", title: "Adobe", icon: "🎨" },
+  { key: "kaspersky", title: "Kaspersky", icon: "🛡️" },
+  { key: "facebook", title: "Facebook", icon: "🔵" },
+  { key: "discord", title: "Discord", icon: "🎮" },
+  { key: "krea", title: "Krea", icon: "◼️" },
+  { key: "dreamina", title: "dreamina", icon: "🎨" },
+  { key: "minimax", title: "Minimax", icon: "🔶" },
+  { key: "meitu", title: "Meitu", icon: "📸" },
+  { key: "scribd", title: "SCRIBD", icon: "📚" },
+  { key: "icloud", title: "Icloud", icon: "☁️" },
+  { key: "seedance", title: "Seedance", icon: "🎞️" },
+  { key: "locket", title: "Locket", icon: "🟡" },
+  { key: "lovable", title: "Lovable", icon: "💗" },
+  { key: "xbox", title: "Xbox", icon: "🎮" },
+  { key: "steam", title: "Steam", icon: "🎮" },
+  { key: "kahoot", title: "Kahoot", icon: "🟣" },
+  { key: "expressvpn", title: "Express", icon: "🛡️" },
+  { key: "surfshark", title: "SurfShark", icon: "🌊" },
+  { key: "reddit", title: "Reddit", icon: "🟠" },
+  { key: "vieon", title: "Vieon", icon: "🟢" },
+
+  // Existing categories kept so no current products disappear.
   { key: "gamma", title: "Gamma AI", icon: "✨" },
   { key: "netflix", title: "Netflix", icon: "🔥" },
-  { key: "duolingo", title: "Duolingo", icon: "🦉" },
-  { key: "youtube", title: "YouTube", icon: "▶️" },
-  { key: "figma", title: "Figma", icon: "🎭" },
-  { key: "microsoft", title: "Microsoft 365", icon: "🪟" },
-  { key: "claude", title: "Claude", icon: "🤖" },
-  { key: "adobe", title: "Adobe", icon: "🎨" },
   { key: "turnitin", title: "Turnitin", icon: "📄" },
-  { key: "grok", title: "Grok", icon: "🔥" },
   { key: "elsa", title: "Elsa Speaks", icon: "🗣️" },
   { key: "veo", title: "Veo 4", icon: "🎬" },
-  { key: "capcut", title: "CapCut", icon: "✂️" },
-  { key: "kling", title: "Kling", icon: "🎥" },
-  { key: "scribd", title: "Scribd", icon: "📚" },
-  { key: "cursor", title: "Cursor", icon: "💻" },
-  { key: "elevenlabs", title: "ElevenLabs", icon: "🎙️" },
-  { key: "tradingview", title: "Trading View", icon: "📈" },
-  { key: "meitu", title: "Meitu SVIP", icon: "📸" },
-  { key: "heygen", title: "Heygen", icon: "🎞️" },
-  { key: "wink", title: "Wink", icon: "✨" },
   { key: "windows", title: "Windows Key", icon: "🪟" },
-  { key: "discord", title: "Discord Nitro", icon: "🎮" },
-  { key: "hma", title: "HMA", icon: "🛡️" },
-  { key: "expressvpn", title: "Express VPN", icon: "🛡️" },
-  { key: "icloud", title: "iCloud", icon: "☁️" },
   { key: "perplexity", title: "Perplexity", icon: "🔥" },
-  { key: "notion", title: "Notion", icon: "📝" },
   { key: "wordwall", title: "Wordwall", icon: "🎲" },
   { key: "suno", title: "Suno", icon: "🎵" },
   { key: "gemini", title: "Gemini", icon: "🔥" },
   { key: "higgs", title: "Higgs Start", icon: "🌟" },
   { key: "kiro", title: "Kiro", icon: "🧩" },
-  { key: "dreamina", title: "Dreamina", icon: "🎨" },
   { key: "quizlet", title: "Quizlet", icon: "🧠" },
   { key: "coursera", title: "Coursera", icon: "🎓" },
   { key: "kimi", title: "Kimi Allegretto 39$", icon: "🤖" },
 ];
+
+const CATEGORY_MENU_ROWS = [
+  ["youtube", "spotify"],
+  ["grok", "claude", "chatgpt"],
+  ["kling", "google_one", "antigravity"],
+  ["microsoft", "duolingo", "zoom"],
+  ["canva", "tiktok", "notion"],
+  ["elevenlabs", "capcut", "autodesk"],
+  ["tradingview", "freepik", "wink"],
+  ["xinglu", "hma"],
+  ["gmail", "figma", "x"],
+  ["heygen", "proton", "tele"],
+  ["roblox", "cursor"],
+  ["nordvpn", "apple"],
+  ["adobe", "kaspersky", "facebook"],
+  ["discord", "krea", "dreamina"],
+  ["minimax", "meitu"],
+  ["scribd", "icloud"],
+  ["seedance", "locket"],
+  ["lovable", "xbox", "steam"],
+  ["kahoot", "expressvpn", "surfshark"],
+  ["reddit", "vieon"],
+];
+
 const CATEGORY_BY_KEY = Object.fromEntries(CATEGORY_DEFS.map((c) => [c.key, c]));
 const CATEGORY_KEY_BY_TITLE = Object.fromEntries(CATEGORY_DEFS.map((c) => [c.title.toLowerCase(), c.key]));
+const CATEGORY_ALIASES = {
+  "microsoft 365": "microsoft",
+  "microsoft office 365": "microsoft",
+  "office 365": "microsoft",
+  "trading view": "tradingview",
+  "tradingview": "tradingview",
+  "capcut": "capcut",
+  "heygen": "heygen",
+  "hma": "hma",
+  "hma vpn": "hma",
+  "express vpn": "expressvpn",
+  "expressvpn": "expressvpn",
+  "icloud": "icloud",
+  "google one": "google_one",
+};
 
 const CATEGORY_DESCRIPTIONS = {
   chatgpt: "AI subscriptions and ChatGPT plans for work, study, writing, coding, and productivity.",
@@ -798,7 +866,10 @@ function categoryTitle(category) {
 function categoryKey(category) {
   const c = String(category || "other").trim();
   const low = c.toLowerCase();
-  return CATEGORY_BY_KEY[low] ? low : (CATEGORY_KEY_BY_TITLE[low] || low.replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "") || "other");
+  if (CATEGORY_BY_KEY[low]) return low;
+  if (CATEGORY_ALIASES[low]) return CATEGORY_ALIASES[low];
+  if (CATEGORY_KEY_BY_TITLE[low]) return CATEGORY_KEY_BY_TITLE[low];
+  return low.replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "") || "other";
 }
 function productLabel(p, lang = "dual") {
   const stock = Number(p.stock || 0);
@@ -811,6 +882,8 @@ function productLabel(p, lang = "dual") {
 async function showProductsPage(chatId, page = 1, messageId = null) {
   const lang = await langOf(chatId);
   const products = await getActiveProducts();
+  const balance = await getBalance(chatId);
+
   const totals = new Map();
   for (const p of products) {
     const key = categoryKey(p.category);
@@ -820,39 +893,88 @@ async function showProductsPage(chatId, page = 1, messageId = null) {
     old.stock += Number(p.stock || 0);
     totals.set(key, old);
   }
-  const cats = CATEGORY_DEFS.filter((c) => totals.has(c.key));
-  if (!cats.length) {
-    const rows = products.slice(0, 20).map((p) => [{ text: productLabel(p, lang), callback_data: `product_${p.product_id}` }]);
+
+  const availableRows = [];
+  for (const rowKeys of CATEGORY_MENU_ROWS) {
+    const row = rowKeys
+      .filter((key) => totals.has(key))
+      .map((key) => CATEGORY_BY_KEY[key])
+      .filter(Boolean);
+    if (row.length) availableRows.push(row);
+  }
+
+  const menuKeys = new Set(CATEGORY_MENU_ROWS.flat());
+  const additionalCategories = CATEGORY_DEFS.filter(
+    (category) => totals.has(category.key) && !menuKeys.has(category.key)
+  );
+  for (let i = 0; i < additionalCategories.length; i += 3) {
+    availableRows.push(additionalCategories.slice(i, i + 3));
+  }
+
+  if (!availableRows.length) {
+    const rows = products.slice(0, 12).map((p) => [
+      { text: productLabel(p, lang), callback_data: `product_${p.product_id}` },
+    ]);
     rows.push([{ text: `🏠 ${btn(lang, "home")}`, callback_data: "menu" }]);
-    return await sendCard(chatId, `🛍 Available Products
-
-${t(lang, "select_product")}:`, { inline_keyboard: rows }, "", messageId);
+    return await sendCard(
+      chatId,
+      `🛍 Available Products\n\n${t(lang, "select_product")}:`,
+      { inline_keyboard: rows },
+      "",
+      messageId,
+    );
   }
-  const totalPages = Math.max(1, Math.ceil(cats.length / 21));
+
+  // Four visual rows per page keeps the list compact on mobile.
+  const ROWS_PER_PAGE = 4;
+  const totalPages = Math.max(1, Math.ceil(availableRows.length / ROWS_PER_PAGE));
   page = Math.max(1, Math.min(Number(page) || 1, totalPages));
-  const shown = cats.slice((page - 1) * 21, page * 21);
-  const rows = [];
-  for (let i = 0; i < shown.length; i += 3) {
-    rows.push(shown.slice(i, i + 3).map((c) => ({
-      text: `${c.icon} ${c.title}`,
-      callback_data: `cat_${c.key}`,
-    })));
-  }
-  rows.push([
-    { text: `🔄 ${btn(lang, "refresh")}`, callback_data: `products_p${page}` },
-    { text: `🌐 ${btn(lang, "language")}`, callback_data: "language" },
-  ]);
-  rows.push([
-    { text: "⬅️ Prev", callback_data: `products_p${Math.max(1, page - 1)}` },
-    { text: `${page}/${totalPages}`, callback_data: "noop" },
-    { text: "Next ➡️", callback_data: `products_p${Math.min(totalPages, page + 1)}` },
-  ]);
-  rows.push([{ text: `🏠 ${btn(lang, "home")}`, callback_data: "menu" }]);
-  const text = `🏛 ${STORE_NAME}
-💰 Your Balance: $0.00 USDT
 
-🛍 Available Products:
-Please select a product category below.`;
+  const startIndex = (page - 1) * ROWS_PER_PAGE;
+  const shownRows = availableRows.slice(startIndex, startIndex + ROWS_PER_PAGE);
+  const rows = [];
+
+  for (const rowCategories of shownRows) {
+    rows.push(
+      rowCategories.map((category) => ({
+        text: `${category.icon} ${category.title}`,
+        callback_data: `cat_${category.key}`,
+      })),
+    );
+  }
+
+  rows.push([
+    {
+      text: "⬅️ Previous",
+      callback_data: page > 1 ? `products_p${page - 1}` : "noop",
+    },
+    { text: `${page}/${totalPages}`, callback_data: "noop" },
+    {
+      text: "Next ➡️",
+      callback_data: page < totalPages ? `products_p${page + 1}` : "noop",
+    },
+  ]);
+
+  rows.push([
+    {
+      text: `🔄 ${btn(lang, "refresh")} products`,
+      callback_data: `products_p${page}`,
+    },
+  ]);
+
+  rows.push([
+    { text: `🌐 ${btn(lang, "language")}`, callback_data: "language" },
+    { text: `🏠 ${btn(lang, "home")}`, callback_data: "menu" },
+  ]);
+
+  const text = `🏛 ${STORE_NAME}
+💰 Your Balance: $${money(balance)} USDT
+
+🛍 Available Products
+📄 Page ${page} / ${totalPages}
+
+Please select a product below 👇`;
+
   const markup = { inline_keyboard: rows };
   if (messageId) return await editMessage(chatId, messageId, text, markup);
   return await sendMessage(chatId, text, markup);
