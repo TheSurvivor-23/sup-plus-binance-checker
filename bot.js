@@ -827,20 +827,21 @@ async function findProduct(productId, includeHidden = false) {
 function homeKeyboard(lang = "dual") {
   return {
     inline_keyboard: [
-      [{ text: "🛍 Shop", callback_data: "products_p1" }],
+      [{ text: "✨ المنتجات | Shop", callback_data: "products_p1" }],
       [
-        { text: "👤 Profile", callback_data: "profile" },
-        { text: "🧾 Orders", callback_data: "orders_menu" },
+        { text: "👤 حسابي | Profile", callback_data: "profile" },
+        { text: "🧾 طلباتي | Orders", callback_data: "orders_menu" },
       ],
-      [{ text: "💳 Top Up", callback_data: "topup" }],
+      [{ text: "💳 شحن الرصيد | Top Up", callback_data: "topup" }],
       [
-        { text: `🌐 ${btn(lang, "language")}`, callback_data: "language" },
-        { text: `🎧 ${btn(lang, "support")}`, callback_data: "support" },
+        { text: "🌐 اللغة", callback_data: "language" },
+        { text: "🎧 الدعم", callback_data: "support" },
       ],
-      [{ text: `🔄 ${btn(lang, "refresh")}`, callback_data: "menu" }],
+      [{ text: "✨ تحديث الواجهة", callback_data: "menu" }],
     ],
   };
 }
+
 function languageKeyboard() {
   return { inline_keyboard: [
     [{ text: "🌐 English + عربي", callback_data: "lang_dual" }],
@@ -860,20 +861,22 @@ Current: ${LANGS[lang]?.name || "English + عربي"}`;
 async function showHome(chatId) {
   const lang = await langOf(chatId);
   const balance = await getBalance(chatId);
-  const text = `🏛 ${STORE_NAME}
+  const text = `✨ ${STORE_NAME}
 ${STORE_SUBTITLE}
 
-💰 Your Balance: $${money(balance)} USDT
+━━━━━━━━━━━━━━
+💰 الرصيد الحالي | Current Balance
+$${money(balance)} USDT
+━━━━━━━━━━━━━━
 
-🛒 Shop digital products
-🎁 Offers & discounts
-💳 Wallet top up by Binance
-🧾 Orders and delivery tracking
-🎧 Support available
+اشتراكاتك الرقمية في مكان واحد.
+اختر القسم الذي تريد البدء منه 👇
 
-Choose an option below 👇`;
+Your digital subscriptions in one place.
+Choose where you want to start.`;
   return await sendCard(chatId, text, homeKeyboard(lang), "");
 }
+
 function categoryIcon(category) {
   const key = categoryKey(category);
   return CATEGORY_BY_KEY[key]?.icon || "📦";
@@ -981,10 +984,19 @@ function serviceKeyForProduct(p) {
 }
 function productLabel(p, lang = "dual") {
   const stock = Number(p.stock || 0);
-  const name = productButtonName(p, lang);
-  const discount = p.discount ? ` | ${p.discount}` : "";
-  const status = stock > 0 ? `Stock ${stock}` : "Sold out";
-  return `${name} — $${money(p.price)}${discount} | ${status}`;
+  const rawEn = String(p.name_en || p.button_name || p.product_id || "").trim();
+  const rawAr = String(p.name_ar || "").trim();
+  let name = rawEn;
+
+  if (lang === "ar" && rawAr) name = rawAr;
+  else if (lang === "dual" && rawAr && rawAr.toLowerCase() !== rawEn.toLowerCase()) {
+    name = `${rawEn} | ${rawAr}`;
+  }
+
+  if (name.length > 42) name = `${name.slice(0, 39)}...`;
+  const discount = p.discount ? ` · ${p.discount}` : "";
+  const status = stock > 0 ? `متوفر ${stock}` : "غير متوفر";
+  return `${name} · $${money(p.price)}${discount} · ${status}`;
 }
 
 async function showProductsPage(chatId, page = 1, messageId = null) {
@@ -1016,8 +1028,8 @@ async function showProductsPage(chatId, page = 1, messageId = null) {
     }
   }
 
-  // Taller mobile panel: 16 apps per page = 8 rows x 2 columns.
-  const APPS_PER_PAGE = 16;
+  // 18 apps per page = 9 rows x 2 columns: intentionally taller on mobile.
+  const APPS_PER_PAGE = 18;
   const totalPages = Math.max(1, Math.ceil(visibleCategories.length / APPS_PER_PAGE));
   page = Math.max(1, Math.min(Number(page) || 1, totalPages));
 
@@ -1032,23 +1044,26 @@ async function showProductsPage(chatId, page = 1, messageId = null) {
   }
 
   rows.push([
-    { text: '‹ السابق', callback_data: page > 1 ? `products_p${page - 1}` : 'noop' },
-    { text: `✨ ${page}/${totalPages} ✨`, callback_data: 'noop' },
-    { text: 'التالي ›', callback_data: page < totalPages ? `products_p${page + 1}` : 'noop' },
+    { text: "‹ السابق", callback_data: page > 1 ? `products_p${page - 1}` : "noop" },
+    { text: `✨ ${page}/${totalPages}`, callback_data: "noop" },
+    { text: "التالي ›", callback_data: page < totalPages ? `products_p${page + 1}` : "noop" },
   ]);
 
   rows.push([
-    { text: '✨ تحديث', callback_data: `products_p${page}` },
-    { text: '🏠 الرئيسية', callback_data: 'menu' },
+    { text: "✨ تحديث", callback_data: `products_p${page}` },
+    { text: "🏠 الرئيسية", callback_data: "menu" },
   ]);
 
-  const text = `🏛 ${STORE_NAME}
+  const text = `✨ ${STORE_NAME}
 
-💰 Balance | الرصيد: $${money(balance)} USDT
+💰 الرصيد | Balance: $${money(balance)} USDT
 
-✨ Products | المنتجات
-اختَر التطبيق أولاً ثم اختر الباقة المناسبة.
-Choose an app first, then choose the plan you want.`;
+━━━━━━━━━━━━━━
+✨ المنتجات | Products
+اختر التطبيق أولاً، وبعدها ستظهر لك الباقات المتوفرة داخله.
+Choose an app first, then select the plan you want.
+
+صفحة ${page} من ${totalPages}`;
   const markup = { inline_keyboard: rows };
 
   if (messageId) return await editMessage(chatId, messageId, text, markup);
@@ -1057,7 +1072,7 @@ Choose an app first, then choose the plan you want.`;
 
 async function showCategoryPlans(chatId, key, messageId = null) {
   const lang = await langOf(chatId);
-  const cat = CATEGORY_BY_KEY[key] || { key, title: key, icon: '' };
+  const cat = CATEGORY_BY_KEY[key] || { key, title: key, icon: "" };
   const products = (await getActiveProducts()).filter((p) => serviceKeyForProduct(p) === key);
   const rows = [];
 
@@ -1066,18 +1081,20 @@ async function showCategoryPlans(chatId, key, messageId = null) {
   }
 
   rows.push([
-    { text: '‹ رجوع', callback_data: 'products_p1' },
-    { text: '🏠 الرئيسية', callback_data: 'menu' }
+    { text: "‹ رجوع للمنتجات", callback_data: "products_p1" },
+    { text: "🏠 الرئيسية", callback_data: "menu" }
   ]);
 
   const empty = products.length
-    ? ''
-    : `\n\nلا توجد باقات متاحة حالياً لهذا التطبيق.\nNo active plans are available for this app right now.`;
+    ? ""
+    : `\n\nلا توجد باقات متاحة حالياً لهذا التطبيق.\nNo active plans are available right now.`;
 
   const text = `✨ ${cat.title}
 
-اختر الباقة المناسبة لك.
-Choose the package that suits you.${empty}`;
+الباقات المتوفرة | Available Plans
+━━━━━━━━━━━━━━
+اختر الباقة المناسبة، ثم راجع التفاصيل والسعر قبل الشراء.
+Choose the plan that suits you, then review its details before purchase.${empty}`;
   const markup = { inline_keyboard: rows };
 
   if (messageId) return await editMessage(chatId, messageId, text, markup);
