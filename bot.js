@@ -1115,18 +1115,29 @@ Choose the plan that suits you, then review its details before purchase.${empty}
 
 async function showTopUp(chatId, previousMessageId = null) {
   const balance = await getBalance(chatId);
-  const text = `💳 Top Up Your Wallet
+  const text = `✨ المحفظة | Wallet
 
-Current balance: $${money(balance)} USDT
+الرصيد الحالي
+Current balance
+$${money(balance)} USDT
 
-Choose an amount, then pay via Binance.
-Wallet balance can be used to buy products directly.`;
-  return await sendCard(chatId, text, { inline_keyboard: [
-    [{ text: "$5", callback_data: "topup_amount_5" }, { text: "$10", callback_data: "topup_amount_10" }, { text: "$20", callback_data: "topup_amount_20" }],
-    [{ text: "$50", callback_data: "topup_amount_50" }, { text: "$100", callback_data: "topup_amount_100" }],
-    [{ text: "🟢 Binance Deposit", callback_data: "topup_amount_10" }],
-    [{ text: "🏠 Home", callback_data: "menu" }],
-  ] }, "", previousMessageId);
+اختر مبلغ الشحن عبر Binance.
+Choose the amount you want to add.`;
+  const markup = { inline_keyboard: [
+    [
+      { text: "$5", callback_data: "topup_amount_5" },
+      { text: "$10", callback_data: "topup_amount_10" },
+      { text: "$20", callback_data: "topup_amount_20" },
+    ],
+    [
+      { text: "$50", callback_data: "topup_amount_50" },
+      { text: "$100", callback_data: "topup_amount_100" },
+    ],
+    [{ text: "🏠 الرئيسية | Home", callback_data: "menu" }],
+  ] };
+
+  if (previousMessageId) return await editMessage(chatId, previousMessageId, text, markup);
+  return await sendMessage(chatId, text, markup);
 }
 function makeTopupId() {
   return `TOP-${crypto.randomUUID().replace(/-/g, "").slice(0, 10).toUpperCase()}`;
@@ -1149,37 +1160,34 @@ async function createTopup(chatId, amount) {
 }
 async function showTopupInvoice(chatId, amount, previousMessageId = null) {
   const topup = await createTopup(chatId, amount);
-  const text = `🟢 Binance Top Up
+  const text = `✨ شحن المحفظة | Wallet Top Up
 
-Amount: ${money(topup.amount)} USDT
-Top Up ID: ${topup.topup_id}
+المبلغ | Amount: $${money(topup.amount)} USDT
+رقم العملية | Top Up ID: ${topup.topup_id}
 
-Option 1 — Binance Pay / Binance ID
-1️⃣ Open Binance Pay
-2️⃣ Send to UID: ${BINANCE_UID}
-3️⃣ Amount: ${money(topup.amount)} USDT
-4️⃣ Send the Binance Pay Order ID / CXID here
+━━━━━━━━━━━━━━
+Binance Pay
+UID: ${BINANCE_UID}
+المبلغ المطلوب | Amount: $${money(topup.amount)} USDT
+بعد التحويل أرسل Order ID أو CXID هنا.
 
-Option 2 — USDT Deposit
+━━━━━━━━━━━━━━
+USDT Transfer
 Network: ${BINANCE_NETWORK}
 Address:
 ${BINANCE_ADDRESS}
 
-Send exact amount only, then send TXID / Transaction Hash here.
+أرسل نفس المبلغ بالضبط، ثم أرسل TXID هنا.
+Send the exact amount, then send the TXID here.
 
-⚠️ Important:
-• Send the exact amount shown.
-• If Binance charges a fee, make sure the final received amount equals the top up amount.
-• Wrong amount or wrong network cannot be refunded.
+تنبيه: استخدم الشبكة الصحيحة ولا ترسل مبلغاً مختلفاً.`;
+  const markup = { inline_keyboard: [
+    [{ text: "✕ إلغاء | Cancel", callback_data: "cancel_topup" }],
+    [{ text: "🏠 الرئيسية | Home", callback_data: "menu" }],
+  ] };
 
-Examples:
-• Binance Pay Order ID: 440449074789163008
-• CXID: CX123456789
-• TXID: 0xabc123...`;
-  return await sendCard(chatId, text, { inline_keyboard: [
-    [{ text: "❌ Cancel", callback_data: "cancel_topup" }],
-    [{ text: "🏠 Home", callback_data: "menu" }],
-  ] }, "", previousMessageId);
+  if (previousMessageId) return await editMessage(chatId, previousMessageId, text, markup);
+  return await sendMessage(chatId, text, markup);
 }
 async function showDepositBinance(chatId, previousMessageId = null) {
   return await showTopupInvoice(chatId, 10, previousMessageId);
@@ -1534,69 +1542,87 @@ async function showPayment(chatId, from, data, previousMessageId = null) {
   } catch (e) {
     return await sendMessage(chatId, `❌ ${e.message}`);
   }
-  const p = await findProduct(productId, true);
-  const text = `🟡 ${t(lang, "binance_deposit")}
 
-🎯 ${btn(lang, "product")}: ${order.product_name} x ${order.qty}
-💵 ${btn(lang, "amount")}: ${money(order.amount)} USDT
-🧾 ${btn(lang, "order_id")}: ${order.order_id}
+  const [p, balance] = await Promise.all([
+    findProduct(productId, true),
+    getBalance(chatId),
+  ]);
+
+  const text = `✨ الدفع | Payment
+
+المنتج | Product
+${order.product_name} × ${order.qty}
+
+الإجمالي | Total
+$${money(order.amount)} USDT
+
+رقم الطلب | Order ID
+${order.order_id}
 
 ━━━━━━━━━━━━━━
-🏦 Binance Pay / Binance ID
-1️⃣ Open Binance Pay
-2️⃣ Send to UID: ${BINANCE_UID}
-3️⃣ Amount: ${money(order.amount)} USDT
-4️⃣ Copy the Order ID / CXID and send it here
+Binance Pay
+UID: ${BINANCE_UID}
+Amount: $${money(order.amount)} USDT
+بعد الدفع أرسل Order ID أو CXID هنا.
 
 ━━━━━━━━━━━━━━
-🟢 USDT Deposit / Wallet Transfer
-1️⃣ Send USDT to this address:
+USDT Transfer
+Network: ${BINANCE_NETWORK}
+Address:
 ${BINANCE_ADDRESS}
+Amount: $${money(order.amount)} USDT
+بعد التحويل أرسل TXID هنا.
 
-${btn(lang, "network")}: ${BINANCE_NETWORK}
-${btn(lang, "amount")}: ${money(order.amount)} USDT
-2️⃣ Copy the TXID / Transaction Hash and send it here
+⚠️ أرسل المبلغ نفسه واستخدم الشبكة الصحيحة.
+Send the exact amount and use the correct network.`;
 
-${t(lang, "send_txid")}
-
-⚠️ Important Payment Notice
-• Send the exact amount shown.
-• Use the correct network/address.
-• If Binance charges a fee, make sure the final received amount is exactly the order amount.
-• Wrong amount or wrong network cannot be refunded.
-• No refund after payment confirmation.
-
-⚠️ تنبيه مهم قبل الدفع
-• أرسل نفس المبلغ المطلوب بالضبط.
-• استخدم نفس الشبكة والعنوان.
-• إذا ظهرت عمولة تحويل، تأكد أن المبلغ الذي يصل لنا يساوي مبلغ الطلب بالضبط.
-• أي تحويل بمبلغ خاطئ أو شبكة خاطئة لا يمكن استرجاعه.
-• لا يوجد Refund بعد تأكيد الدفع.`;
-  const balance = await getBalance(chatId);
   const markup = { inline_keyboard: [
-    [{ text: `💰 Pay from Wallet ($${money(balance)})`, callback_data: `walletpay_${order.order_id}` }],
-    [{ text: `✅ ${btn(lang, "i_paid")}`, callback_data: `paid_${order.order_id}` }],
-    [{ text: `❌ ${btn(lang, "cancel_order")}`, callback_data: "cancel_order" }, { text: `🏠 ${btn(lang, "home")}`, callback_data: "menu" }],
+    [{ text: `💰 الدفع من المحفظة · $${money(balance)}`, callback_data: `walletpay_${order.order_id}` }],
+    [{ text: "✓ دفعت | I paid", callback_data: `paid_${order.order_id}` }],
+    [
+      { text: "‹ رجوع", callback_data: `buy_${productId}` },
+      { text: "✕ إلغاء", callback_data: "cancel_order" },
+    ],
   ] };
+
+  if (previousMessageId && !p?.image_url) {
+    return await editMessage(chatId, previousMessageId, text, markup);
+  }
   return await sendCard(chatId, text, markup, p?.image_url || "", previousMessageId);
 }
 async function markPaidPrompt(chatId, orderId, previousMessageId = null) {
   const lang = await langOf(chatId);
   const order = await storeGet(["orders", orderId]);
-  if (!order || String(order.chat_id) !== String(chatId)) return await sendMessage(chatId, `⚠️ ${t(lang, "order_not_found")}`);
+  if (!order || String(order.chat_id) !== String(chatId)) {
+    return await sendMessage(chatId, `⚠️ ${t(lang, "order_not_found")}`);
+  }
+
   const next = { ...order, status: "WAITING_PAYMENT_REF", lang, updated_at: nowIso() };
-  await storeSet(["active_order", String(chatId)], next);
-  await storeSet(["orders", order.order_id], next);
-  return await sendCard(chatId, `✅ ${t(lang, "order_summary")}
+  await Promise.all([
+    storeSet(["active_order", String(chatId)], next),
+    storeSet(["orders", order.order_id], next),
+  ]);
 
-${t(lang, "send_txid")}
+  const text = `✓ تم اختيار "دفعت"
+Payment reference required
 
-Examples:
-• Binance Pay Order ID: 440449074789163008
-• CXID: CX123456789
-• TXID: 0xabc123...
+رقم الطلب | Order ID
+${order.order_id}
 
-${btn(lang, "order_id")}: ${order.order_id}`, undefined, "", previousMessageId);
+أرسل الآن أحد الخيارات التالية في هذه المحادثة:
+• Binance Pay Order ID
+• CXID
+• TXID / Transaction Hash
+
+سيتم فحص TXID تلقائياً، أما Order ID وCXID فيحتاجان مراجعة الأدمن.`;
+
+  const markup = { inline_keyboard: [
+    [{ text: "✕ إلغاء الطلب | Cancel", callback_data: "cancel_order" }],
+    [{ text: "🏠 الرئيسية | Home", callback_data: "menu" }],
+  ] };
+
+  if (previousMessageId) return await editMessage(chatId, previousMessageId, text, markup);
+  return await sendMessage(chatId, text, markup);
 }
 async function cancelOrder(chatId) {
   const lang = await langOf(chatId);
