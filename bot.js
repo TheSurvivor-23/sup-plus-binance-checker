@@ -1372,11 +1372,25 @@ function quantityKeyboard(p, lang = "dual") {
   const stock = Number(p.stock || 0);
   const choices = [1, 2, 3, 5, 10, 15, 20, 25].filter((q) => q <= stock);
   const rows = [];
+
   for (let i = 0; i < choices.length; i += 4) {
-    rows.push(choices.slice(i, i + 4).map((q) => ({ text: `📦 ${q}`, callback_data: `qty_${p.product_id}_${q}` })));
+    rows.push(
+      choices.slice(i, i + 4).map((q) => ({
+        text: `${q}`,
+        callback_data: `qty_${p.product_id}_${q}`,
+      }))
+    );
   }
-  if (!choices.length) rows.push([{ text: `🔴 ${btn(lang, "out_stock")}`, callback_data: "noop" }]);
-  rows.push([{ text: `↩️ ${btn(lang, "back_product")}`, callback_data: `product_${p.product_id}` }, { text: `🏠 ${btn(lang, "home")}`, callback_data: "menu" }]);
+
+  if (!choices.length) {
+    rows.push([{ text: "غير متوفر | Sold out", callback_data: "noop" }]);
+  }
+
+  rows.push([
+    { text: "‹ رجوع للباقة", callback_data: `product_${p.product_id}` },
+    { text: "🏠 الرئيسية", callback_data: "menu" },
+  ]);
+
   return { inline_keyboard: rows };
 }
 async function showQuantity(chatId, productId, previousMessageId = null) {
@@ -1384,18 +1398,31 @@ async function showQuantity(chatId, productId, previousMessageId = null) {
     langOf(chatId),
     findProduct(productId),
   ]);
+
   if (!p) return await sendMessage(chatId, `⚠️ ${t(lang, "product_not_found")}`);
-  const text = `🛒 ${t(lang, "select_qty")}
 
-📦 ${productName(p, lang)}
-💵 $${money(p.price)} USDT
-📦 ${btn(lang, "stock")}: ${p.stock}
+  const text = `✨ اختر الكمية
+Select Quantity
 
-${productDescription(p, lang)}
+${productName(p, lang)}
 
-${t(lang, "how_many")}`;
+السعر للوحدة: $${money(p.price)} USDT
+Price per unit: $${money(p.price)} USDT
+
+المتوفر: ${p.stock}
+Available: ${p.stock}
+
+━━━━━━━━━━━━━━
+
+كم اشتراك تريد؟
+How many would you like?`;
+
   const markup = quantityKeyboard(p, lang);
-  if (previousMessageId && !p.image_url) return await editMessage(chatId, previousMessageId, text, markup);
+
+  if (previousMessageId && !p.image_url) {
+    return await editMessage(chatId, previousMessageId, text, markup);
+  }
+
   return await sendCard(chatId, text, markup, p.image_url, previousMessageId);
 }
 function parseQty(data) {
@@ -1409,21 +1436,54 @@ async function showSummary(chatId, data, previousMessageId = null) {
     langOf(chatId),
     findProduct(productId),
   ]);
+
   if (!p) return await sendMessage(chatId, `⚠️ ${t(lang, "product_not_found")}`);
-  if (qty < 1 || qty > Number(p.stock || 0)) return await sendMessage(chatId, `🔴 ${t(lang, "qty_not_available")}. ${btn(lang, "stock")}: ${p.stock}`);
-  const total = Number(p.price) * qty;
-  const text = `🧾 ${t(lang, "order_summary")}
 
-📦 ${productName(p, lang)}
-📦 ${btn(lang, "quantity")}: ${qty}
-💵 ${btn(lang, "total")}: $${money(total)} USDT
+  if (qty < 1 || qty > Number(p.stock || 0)) {
+    return await sendMessage(
+      chatId,
+      `⚠️ الكمية غير متوفرة | Quantity not available
+المتوفر | Available: ${p.stock}`
+    );
+  }
 
-${productDescription(p, lang)}`;
-  const markup = { inline_keyboard: [
-    [{ text: `✅ ${btn(lang, "confirm_pay")}`, callback_data: `confirm_${productId}_${qty}` }],
-    [{ text: `↩️ ${btn(lang, "change_qty")}`, callback_data: `buy_${productId}` }, { text: `🏠 ${btn(lang, "home")}`, callback_data: "menu" }],
-  ] };
-  if (previousMessageId && !p.image_url) return await editMessage(chatId, previousMessageId, text, markup);
+  const unitPrice = Number(p.price);
+  const total = unitPrice * qty;
+
+  const text = `✨ ملخص الطلب
+Order Summary
+
+المنتج | Product
+${productName(p, lang)}
+
+الكمية | Quantity: ${qty}
+سعر الوحدة | Unit price: $${money(unitPrice)} USDT
+الإجمالي | Total: $${money(total)} USDT
+
+━━━━━━━━━━━━━━
+
+راجع الطلب قبل المتابعة للدفع.
+Review your order before continuing to payment.`;
+
+  const markup = {
+    inline_keyboard: [
+      [
+        {
+          text: "✨ متابعة للدفع | Continue to Payment",
+          callback_data: `confirm_${productId}_${qty}`,
+        },
+      ],
+      [
+        { text: "‹ تغيير الكمية", callback_data: `buy_${productId}` },
+        { text: "🏠 الرئيسية", callback_data: "menu" },
+      ],
+    ],
+  };
+
+  if (previousMessageId && !p.image_url) {
+    return await editMessage(chatId, previousMessageId, text, markup);
+  }
+
   return await sendCard(chatId, text, markup, p.image_url, previousMessageId);
 }
 function parsePay(data, prefix) {
